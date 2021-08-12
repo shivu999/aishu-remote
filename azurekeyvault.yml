@@ -1,0 +1,11 @@
+data "azurerm_key_vault_secret" "test" {
+  name      = "secret-sauce"
+  vault_uri = "https://test1.vault.azure.net/"
+}
+
+output "secret_value" {
+  value = "${data.azurerm_key_vault_secret.test.value}"
+}
+
+
+admin_password=azurerm_key_vault_secret.test.value
