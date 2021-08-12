@@ -1,0 +1,60 @@
+steps:
+- powershell: |
+   if ($env:SYSTEM_STAGEDISPLAYNAME -like "*Development*")
+   {
+     write-output "Deployment is to Development, therefore deployment does not have to be from master branch."
+   }
+   elseif ($env:BUILD_SOURCEBRANCHNAME -ne "master")
+   {
+     write-output "##vso[task.LogIssue type=error;]Deployment to $env:SYSTEM_STAGEDISPLAYNAME must only be from the master branch."
+     exit 1
+   }
+   else
+   {
+     write-output "Deployment is from master."
+   }
+  displayName: 'Check Deployment Is From The Master Branch'
+
+steps:
+- task: qetza.replacetokens.replacetokens-task.replacetokens@3
+  displayName: 'Replace tokens in **/*.tf **/*.var **/*.vars **/*.tfvars **/*.txt **/*.sh **/*.gcfg'
+  inputs:
+    rootDirectory: '$(TerraformTemplatePath)'
+    targetFiles: |
+     **/*.tf
+     **/*.var
+     **/*.vars
+     **/*.tfvars
+     **/*.txt
+     **/*.sh
+     **/*.gcfg
+    keepToken: true
+    tokenPrefix: '__'
+    tokenSuffix: '__'
+
+steps:
+- task: AzureCLI@1
+  displayName: 'Terraform Init'
+  inputs:
+    azureSubscription: 'np-deal-advisory'
+    scriptLocation: inlineScript
+    inlineScript: '$(TerraformInitArguments)'
+    workingDirectory: '$(TerraformTemplatePath)'
+
+steps:
+- task: AzureCLI@1
+  displayName: 'Download Terraform Plan to Agent'
+  inputs:
+    azureSubscription: 'np-deal-advisory'
+    scriptLocation: inlineScript
+    inlineScript: '$(DownloadTerraformPlan)'
+    workingDirectory: '$(TerraformTemplatePath)'
+
+steps:
+- task: AzureCLI@1
+  displayName: 'Terraform Apply'
+  inputs:
+    azureSubscription: 'np-deal-advisory'
+    scriptLocation: inlineScript
+    inlineScript: '$(TerraformApplyArguments)'
+    workingDirectory: '$(TerraformTemplatePath)'
